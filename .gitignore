@@ -1,0 +1,7 @@
+tags
+*.o
+*.swp
+*~
+*.un
+*.jpg
+*.jpeg
