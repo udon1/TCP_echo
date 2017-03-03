@@ -19,19 +19,19 @@ struct echo_msg {
 
 int main (int argc, char *argv[]) {
     in_port_t myport;
-    int soc;
+    int soc, soc1;
     socklen_t opt_len;
     struct sockaddr_in myskt;
     socklen_t fromlen;
     struct sockaddr_in skt;
     struct echo_msg msg;
+    int procid = 0;
+    pid_t pid;
 
     if (argc != 2) {
         fprintf(stderr, "Usage: ./udpserver [port]\n");		
         exit(1);
-    } else {
-        printf("argc: 2\n");
-    }
+    } 
     myport = atoi(argv[1]);
     if((soc = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
         perror("socket");
@@ -58,27 +58,43 @@ int main (int argc, char *argv[]) {
     }
     while(1) {
         /*accept*/
-        if ((soc = (accept(soc, (struct sockaddr *)&skt, &fromlen))) == -1) {
-            perror("");
+        if ((pid = fork()) == -1) {
+            perror("fork");
             return (-1);
-            }
+        } else if ((pid = fork()) == 0) {
+
+        } else {
+            procid++;
+        }
+        if ((soc1 = (accept(soc, (struct sockaddr *)&skt, &fromlen))) == -1) {
+            perror("accept");
+            return (-1);
+        }
 
         for(;;) {
             /*仕様に合うように実装*/
-            if ((recv(soc, &msg, sizeof(msg), 0)) == -1) {
-                perror("recvfrom");
+            if ((recv(soc1, &msg, sizeof(msg), 0)) == -1) {
+                perror("recv");
                 exit(-1);
             } 
 
+            //printf("clisent%d  ", getpid());
+            printf("clisent%d  ", procid);
             printf("seq: %d, msg: %s\n", msg.seq, msg.msg);
             msg.seq++;
 
-            if ((send(soc, &msg, sizeof(msg), 0)) == -1) {
-                perror("sendto");
+            if ((send(soc1, &msg, sizeof(msg), 0)) == -1) {
+                perror("send");
                 exit(-1);
             } 
+            if (strcmp(msg.msg, "FIN\n") == 0 || msg.seq >= 10) {
+                break;
+            }
         }
-        close(soc);
+        fprintf(stderr, "close\n");
+        close(soc1);
     }
+    close(soc);
+    fprintf(stderr, "exit main\n");
     return 0;
 }
